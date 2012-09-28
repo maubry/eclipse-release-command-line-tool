@@ -27,42 +27,50 @@ class MilestoneAction(argparse.Action):
         """Milestone production action"""
         # Compute requested pathes
         if not args.directory.endswith('/'):
-            args.directory = "%s/"%args.directory
-        nightly_dir = "%s%s"%(args.directory, Const.NIGHTLY_OUTPUT_DIR)
-        milestone_dir = "%s%s%s"%(args.directory,
-                Const.MILESTONES_OUTPUT_DIR, args.milestone)
-        milestone_artifact_path = '%s/%s'%(milestone_dir, Const.ARTIFACT_FILE)
-        milestone_content_path  = '%s/%s'%(milestone_dir, Const.CONTENT_FILE)
-        archived_milestone_path = '%s%s/%s'%(args.directory,
-                Const.ARCHIVE_MILESTONE, args.previousversion)
-        current_milestone_path = '%s%s'%(args.directory,
+            args.directory = '{0}/'.format(args.directory)
+        nightly_dir = '{0}{1}'.format(args.directory, Const.NIGHTLY_OUTPUT_DIR)
+        milestone_dir = "{0}{1}{2}".format(args.directory,
+                Const.MILESTONES_OUTPUT_DIR, args.newversion)
+        milestone_artifact_path = '{0}/{1}'.format(milestone_dir, Const.ARTIFACT_FILE)
+        milestone_content_path  = '{0}/{1}'.format(milestone_dir,
+                Const.CONTENT_FILE)
+        archived_milestone_path = '{0}{1}{2}'.format(args.directory,
+                Const.ARCHIVE_MILESTONE, args.oldversion)
+        current_milestone_path = '{0}{1}'.format(args.directory,
                 Const.CURRENT_MILESTONE)
-        current_artifact_path = '%s/%s'%(current_milestone_path,
+        current_artifact_path = '{0}{1}'.format(current_milestone_path,
                 Const.ARTIFACT_FILE)
-        current_content_path = '%s/%s'%(current_milestone_path,
+        current_content_path  = '{0}{1}'.format(current_milestone_path,
                 Const.CONTENT_FILE)
         nightly_files = [nightly_dir,
-                '%s/%s'%(nightly_dir, Const.ARTIFACT_FILE),
-                '%s/%s'%(nightly_dir, Const.CONTENT_FILE)]
+                '{0}/{1}'.format(nightly_dir, Const.ARTIFACT_FILE),
+                '{0}/{1}'.format(nightly_dir, Const.CONTENT_FILE)]
 
         # Check if destination directory exists
         if os.path.exists(milestone_dir):
-            sys.stderr.write('Destination %s already exists.'%milestone_dir)
+            sys.stdout.write('Destination {0} already exists.'.format(
+                milestone_dir))
             sys.exit(1)
 
         # Check if input directory exists
         for file in nightly_files:
             if not os.path.exists(file):
-                print 'Error %s does not exists.'%file
+                sys.stdout.write('Error {0} does not exists.'.format(file))
                 sys.exit(1)
+
+        # Check artifacts path
+        if not os.path.exists(args.artifactspath):
+            sys.stdout.write('There are no artifacts at {0}.\n'.format(
+                args.artifactspath))
+            sys.exit(1)
 
         # Copy files
         try:
-            print 'Copy %s to %s.'%(nightly_dir, milestone_dir)
+            sys.stdout.write('Copy {0} to {1}: '.format(nightly_dir, milestone_dir))
             shutil.copytree(nightly_dir, milestone_dir)
-            print 'Done'
-        except Error as ex:
-            sys.stderr.stderr.write('Failure: %s.'%ex.message)
+            sys.stdout.write('Done\n')
+        except OSError as ex:
+            sys.stdout.write('Failure\n%s'%ex.message)
             sys.exit(1)
 
         # Ensure permissions
@@ -71,32 +79,33 @@ class MilestoneAction(argparse.Action):
             sys.exit(1)
 
         # Archive current milestone
-        print 'Archiving current milestone.'
-        print 'Moving %s to %s.'%(current_milestone_path,
-                archived_milestone_path)
+        sys.stdout.write('Archiving current milestone.\n')
         try:
-            shutil.copytree(current_milestone_path,
-                    archived_milestone_path)
-            print 'Done'
-        except Error as e:
-            print 'Error, unable to archive %s.\n%s'%(
-                    current_milestone_path, e.message)
+            sys.stdout.write('Creating directory {0}: '.format(archived_milestone_path))
+            sys.stdout.write('Done\n')
+            sys.stdout.write('Moving {0} to {1}: '.format(current_milestone_path,
+                archived_milestone_path))
+            shutil.copytree(current_milestone_path, archived_milestone_path)
+            sys.stdout.write('Done\n')
+        except OSError as e:
+            sys.stdout.write('Error\nUnable to archive %s.\n%s'%(
+                current_milestone_path, e.strerror))
             sys.exit(1)
 
         # Delivering new version
-        print 'Delivering new version'
+        sys.stdout.write('Delivering new version.\n')
         try:
-            print 'Flushing %s'
+            sys.stdout.write('Flushing {0}: '.format(current_milestone_path))
             shutil.rmtree(current_milestone_path)
-            print 'Done'
-            print 'Moving %s to %s.'%(Const.LAST_CI_BUILD_PATH,
-                    current_milestone_path)
-            shutil.copytree(Const.LAST_CI_BUILD_PATH,
-                    current_milestone_path)
-            print 'Done'
-        except Error as e:
-            print 'Error, unable to publish to %s.\n%s'%(
-                    current_milestone_path, e.message)
+            sys.stdout.write('Done\n')
+
+            sys.stdout.write('Copying {0} to {1}: '.format(args.artifactspath
+                ,current_milestone_path))
+            shutil.copytree(args.artifactspath, current_milestone_path)
+            sys.stdout.write('Done\n')
+        except OSError as e:
+            sys.stdout.write('Error\nUnable to publish to {0}.\n1{}'.format(
+                current_milestone_path, e.strerror))
             sys.exit(1)
 
         # Check files permissions
@@ -107,23 +116,24 @@ class MilestoneAction(argparse.Action):
     @staticmethod
     def check_permissions(parent_folder, files):
         # Checking parent directory
-        print 'Setting permissions on %s.'%parent_folder
+        sys.stdout.write('Setting permissions on {0}: '.format(parent_folder))
         try:
             os.chmod(parent_folder, 02765)
-            print 'Done'
+            sys.stdout.write('Done\n')
         except OSError as ex:
-            print 'Error, unable to set permissions on %s.\n%s'%(
-                    parent_folder, ex.message)
+            sys.stdout.write('Error.\nUnable to set permissions on {0}.\n{1}'\
+                    .format(parent_folder, ex.message))
             return False
 
         # Checking children
         for file in files:
             try:
-                print 'Setting permission on %s.'%file
+                sys.stdout.write('Setting permissions on {0}: '.format(file))
                 os.chmod(file, 0664)
+                sys.stdout.write('Done\n')
             except OSError as e:
-                print 'Error, unable to set permissions on %s.\n%s'%(
-                        file, e.message)
+                sys.stdout.write('Error\nUnable to set permissions on {0}.\n{1}'\
+                        .format(file, e.strerror))
                 return False
         return True
 
@@ -136,27 +146,32 @@ class ReleaseAction(argparse.Action):
 #
 class ParserWithHelp(argparse.ArgumentParser):
     def error(self, msg):
-        sys.stderr.write('Error: %s\n'%msg)
+        sys.stdout.write('Error: {0}\n'.format(msg))
         self.print_help()
         sys.exit(2)
 #
 # Dealing with command line arguments
 #
 parser = ParserWithHelp(
-        description = "Helps release an Eclipse based product.",
-        epilog      = "So far only milestones are implemented.")
-parser.add_argument("-cv", "--currentversion",
-        metavar  = ('version_number'),
-        required = True,
-        help     = "Version being released.")
-parser.add_argument("-pv", "--previousversion",
-        metavar  = ('previous_version_number'),
-        required = True,
-        help     = "Previous version released, used for archiving previous version.")
+        description = 'Helps release an Eclipse based product.',
+        epilog      = 'So far only milestones are implemented.')
+parser.add_argument('-ov', '--oldversion',
+        help     = 'New version number, the one being released.',
+        metavar  = 'version_number',
+        required = True)
+parser.add_argument('-nv', '--newversion',
+        help     = 'Previously released version number, used for archiving it.',
+        metavar  = 'version_number',
+        required = True)
 parser.add_argument('-d', '--directory',
-        help    = 'All directorie used will be relative to this one, defaults to `./`.',
         default = './',
-        metavar = ('dir'))
+        help    = 'All directories used will be relative to this one, defaults to `./`.',
+        metavar = 'dir')
+parser.add_argument('-ap', '--artifactspath',
+        default = Const.LAST_CI_BUILD_PATH,
+        help    = 'Path to the artifacts to release, often last sucessful build form continuous integration.',
+        metavar = 'path_to_artifacts',
+        nargs   = '?')
 
 # Define argument for the type of release we are dealing with.
 # There can be only one type handled at once.
@@ -169,5 +184,6 @@ group.add_argument("-r", "--release",
         action  = ReleaseAction,
         help    = "Indicates that a release sould be delivred.",
         nargs   = 0)
+
 # Parse them all
 args = parser.parse_args()
