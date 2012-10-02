@@ -1,46 +1,45 @@
 #!/usr/bin/python
 # vi: sw=4 ts=4 expandtab smarttab ai smartindent
 import argparse
+from   consts import Const
 import os
-import os.path
+import releaseutils
 import shutil
+import StringIO
 import sys
+import zipfile
 #
 # Improvments:
 # * Create an option to wipe destination directories when they exist
 # * So far, we use a lot of sys.exit(1), maybe it would be nice to have an
 #   error code per error type.
 #
-class Const(object):
-    ARCHIVE_MILESTONE =     "products/milestones/"
-    ARTIFACT_FILE =         "artifacts.jar"
-    CONTENT_FILE =          "content.jar"
-    CURRENT_MILESTONE =     "products/current-milestone/"
-    MILESTONES_OUTPUT_DIR = "releases/milestones/"
-    NIGHTLY_OUTPUT_DIR =    "nightly/"
-    LAST_CI_BUILD_PATH =    "/shared/jobs/koneki-ldt/lastSuccessful/archive/product/target/products/"
+
 #
 # Defining Actions
 #
 class MilestoneAction(argparse.Action):
     def __call__(self, parser, args, values, option_string=None):
         """Milestone production action"""
+
         # Compute requested pathes
         if not args.directory.endswith('/'):
             args.directory = '{0}/'.format(args.directory)
-        nightly_dir = '{0}{1}'.format(args.directory, Const.NIGHTLY_OUTPUT_DIR)
+        nightly_dir   = '{0}{1}'.format(args.directory,
+                Const.NIGHTLY_OUTPUT_DIR)
         milestone_dir = "{0}{1}{2}".format(args.directory,
                 Const.MILESTONES_OUTPUT_DIR, args.newversion)
-        milestone_artifact_path = '{0}/{1}'.format(milestone_dir, Const.ARTIFACT_FILE)
+        milestone_artifact_path = '{0}/{1}'.format(milestone_dir,
+                Const.ARTIFACT_FILE)
         milestone_content_path  = '{0}/{1}'.format(milestone_dir,
                 Const.CONTENT_FILE)
         archived_milestone_path = '{0}{1}{2}'.format(args.directory,
                 Const.ARCHIVE_MILESTONE, args.oldversion)
-        current_milestone_path = '{0}{1}'.format(args.directory,
+        current_milestone_path  = '{0}{1}'.format(args.directory,
                 Const.CURRENT_MILESTONE)
-        current_artifact_path = '{0}{1}'.format(current_milestone_path,
+        current_artifact_path   = '{0}{1}'.format(current_milestone_path,
                 Const.ARTIFACT_FILE)
-        current_content_path  = '{0}{1}'.format(current_milestone_path,
+        current_content_path    = '{0}{1}'.format(current_milestone_path,
                 Const.CONTENT_FILE)
         nightly_files = [nightly_dir,
                 '{0}/{1}'.format(nightly_dir, Const.ARTIFACT_FILE),
@@ -70,25 +69,58 @@ class MilestoneAction(argparse.Action):
             shutil.copytree(nightly_dir, milestone_dir)
             sys.stdout.write('Done\n')
         except OSError as ex:
-            sys.stdout.write('Failure\n%s'%ex.message)
+            sys.stdout.write('Failure\n{0}'.format(ex.message))
             sys.exit(1)
+
+        # Activate statistics
+        try:
+            #Read from archive
+            sys.stdout.write('Opening {0}: '.format(milestone_artifact_path))
+            updatedxmlbuffer = StringIO.StringIO()
+            artifactzip = zipfile.ZipFile(milestone_artifact_path)
+            sys.stdout.write('Done\nReading {0} from {1}: '.format(
+                Const.ARTIFACT_MANIFEST, milestone_artifact_path))
+            artifactfilecontent = artifactzip.read(Const.ARTIFACT_MANIFEST)
+            artifactzip.close()
+
+            # Updating xml            
+            sys.stdout.write('Done\nActivating statistics in {0}: '.format(
+                Const.ARTIFACT_MANIFEST))
+            releaseutils.activatestats(artifactfilecontent, updatedxmlbuffer)
+
+            # Writing in archive
+            sys.stdout.write('Done\nSaving statistics to statistics in {0}: '.\
+                    format(Const.ARTIFACT_MANIFEST))
+            artifactzip = zipfile.ZipFile(milestone_artifact_path, 'w')
+            artifactzip.writestr(Const.ARTIFACT_MANIFEST,
+                    updatedxmlbuffer.getvalue())
+            sys.stdout.write('Done\n')
+        except ValueError as e:
+            sys.stdout.write('Error.\nUnable to activate statistics on {0}.\n{1}'\
+                .format(milestone_artifact_path, e.message))
+            sys.exit(1)
+        except IOError as e:
+            sys.stdout.write('Error.\nUnable to browse {0}.\n{1}'.format(
+                milestone_artifact_path, e))
+            sys.exit(1)
+        finally:
+            artifactzip.close()
+            updatedxmlbuffer.close()
 
         # Ensure permissions
         files = [milestone_artifact_path, milestone_content_path]
-        if not MilestoneAction.check_permissions(milestone_dir, files):
+        if not releaseutils.checkpermissions(milestone_dir, files):
             sys.exit(1)
 
         # Archive current milestone
         sys.stdout.write('Archiving current milestone.\n')
         try:
-            sys.stdout.write('Creating directory {0}: '.format(archived_milestone_path))
-            sys.stdout.write('Done\n')
             sys.stdout.write('Moving {0} to {1}: '.format(current_milestone_path,
                 archived_milestone_path))
             shutil.copytree(current_milestone_path, archived_milestone_path)
             sys.stdout.write('Done\n')
         except OSError as e:
-            sys.stdout.write('Error\nUnable to archive %s.\n%s'%(
+            sys.stdout.write('Error\nUnable to archive %s.\n%s\n'%(
                 current_milestone_path, e.strerror))
             sys.exit(1)
 
@@ -99,43 +131,19 @@ class MilestoneAction(argparse.Action):
             shutil.rmtree(current_milestone_path)
             sys.stdout.write('Done\n')
 
-            sys.stdout.write('Copying {0} to {1}: '.format(args.artifactspath
+            sys.stdout.write('Copying {0} to {1}: '.format(milestone_dir
                 ,current_milestone_path))
-            shutil.copytree(args.artifactspath, current_milestone_path)
+            shutil.copytree(milestone_dir, current_milestone_path)
             sys.stdout.write('Done\n')
         except OSError as e:
-            sys.stdout.write('Error\nUnable to publish to {0}.\n1{}'.format(
+            sys.stdout.write('Error\nUnable to publish to {0}.\n{1}\n'.format(
                 current_milestone_path, e.strerror))
             sys.exit(1)
 
         # Check files permissions
         files = [current_artifact_path, current_content_path]
-        if not MilestoneAction.check_permissions(current_milestone_path, files):
+        if not releaseutils.checkpermissions(current_milestone_path, files):
             sys.exit(1)
-
-    @staticmethod
-    def check_permissions(parent_folder, files):
-        # Checking parent directory
-        sys.stdout.write('Setting permissions on {0}: '.format(parent_folder))
-        try:
-            os.chmod(parent_folder, 02765)
-            sys.stdout.write('Done\n')
-        except OSError as ex:
-            sys.stdout.write('Error.\nUnable to set permissions on {0}.\n{1}'\
-                    .format(parent_folder, ex.message))
-            return False
-
-        # Checking children
-        for file in files:
-            try:
-                sys.stdout.write('Setting permissions on {0}: '.format(file))
-                os.chmod(file, 0664)
-                sys.stdout.write('Done\n')
-            except OSError as e:
-                sys.stdout.write('Error\nUnable to set permissions on {0}.\n{1}'\
-                        .format(file, e.strerror))
-                return False
-        return True
 
 class ReleaseAction(argparse.Action):
     def __call__(self, parser, args, values, option_string=None):
@@ -186,4 +194,5 @@ group.add_argument("-r", "--release",
         nargs   = 0)
 
 # Parse them all
-args = parser.parse_args()
+if __name__ == '__main__':
+    args = parser.parse_args()

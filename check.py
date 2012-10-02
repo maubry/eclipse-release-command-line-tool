@@ -41,11 +41,11 @@ else:
         shutil.copyfileobj(remote_file, artifact_file)
     except IOError as e:
         print e.strerror
-	shutil.rmtree(tmpdir)
+        shutil.rmtree(tmpdir)
         sys.exit(1)
     finally:
         artifact_file.close()
-	remote_file.close()
+        remote_file.close()
     print 'Successfully downloaded to {0}.'.format(filepath)
 
 # Unzipping artifacts
@@ -63,7 +63,7 @@ finally:
 # Creating file tree
 try:
     # Creating directories
-    dirs = ['releases/milestones', 'products/current-milestone'
+    dirs = ['releases/milestones', 'products/current-milestone',
         'products/milestones']
     for dir in dirs:
         dir_to_create = os.path.join(tmpdir, dir)
