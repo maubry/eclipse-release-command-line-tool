@@ -118,7 +118,7 @@ finally:
 
 # Define folder names
 nightlypath = os.path.join(tmpdir, Const.NIGHTLY_OUTPUT_DIR)
-ldt_nightly_path = '{0}{1}'.format(nightlypath, 'ldt')
+ldt_nightly_path = '{0}{1}'.format(nightlypath, Const.LDT_SUB_DIRECTORY)
 artifact_content = os.path.join(tmpdir, Const.ARTIFACT_FOLDER)
 
 # Creating file tree

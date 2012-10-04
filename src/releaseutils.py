@@ -1,6 +1,7 @@
 # vi: sw=4 ts=4 expandtab smarttab ai smartindent
 from   consts import Const
 import os
+import StringIO
 import sys
 import xml.etree.ElementTree as ElementTree
 def activatestats(xmlstring, openresultfile):
@@ -41,6 +42,29 @@ def activatestats(xmlstring, openresultfile):
     # Write successful content
     ElementTree.ElementTree(root).write(openresultfile)
 
+def addxmlchild(xmlstring, childlocation):
+    """Add a `children` node in provided xml under '/children',
+    also updates children count."""
+
+    # Load XML tree
+    root = ElementTree.fromstring(xmlstring)
+
+    # Update children node
+    for children in root.findall('./children'):
+
+        # Append child node
+        ElementTree.SubElement(children, 'child', {'location' : childlocation})
+
+        # Update child count
+        children.set('size', str(len(children)))
+
+    # Return resulting XML as a string
+    buffer = StringIO.StringIO()
+    ElementTree.ElementTree(root).write(buffer)
+    string = buffer.getvalue()
+    buffer.close()
+    return string
+
 def applydirpermisions(folder):
     sys.stdout.write('Setting permissions on {0}: '.format(folder))
     try:
@@ -65,9 +89,7 @@ def checkpermissions(parent_folder, files):
         for file in files:
             try:
                 fileabsolutename = os.path.join(root, file)
-                sys.stdout.write('Setting permissions on {0}: '.format(fileabsolutename))
-                os.chmod(fileabsolutename, )
-                sys.stdout.write('Done\n')
+                os.chmod(fileabsolutename, Const.FILE_PERMISSIONS)
             except OSError as e:
                 sys.stdout.write('Error\nUnable to set permissions on {0}.\n{1}'\
                         .format(file, e.strerror))
