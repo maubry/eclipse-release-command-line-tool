@@ -196,3 +196,4 @@ group.add_argument("-r", "--release",
 # Parse them all
 if __name__ == '__main__':
     args = parser.parse_args()
+    print 'All good.'
