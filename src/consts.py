@@ -1,6 +1,7 @@
 # vi: sw=4 ts=4 expandtab smarttab ai smartindent
 class Const:
     ARCHIVE_MILESTONE            = 'products/milestones/'
+    ARCHIVE_PATH                 = '/home/data/httpd/archive.eclipse.org/koneki/'
     ARTIFACT_FILE                = 'artifacts.jar'
     CONTENT_FILE                 = 'content.jar'
     PRODUCT_CURRENT_MILESTONE    = 'products/current-milestone/'
@@ -12,6 +13,7 @@ class Const:
     RELEASE_MILESTONES_DIR       = 'releases/milestones'
     ARTIFACT_MANIFEST            = 'artifacts.xml'
     ARTIFACT_FOLDER              = 'repository/'
+    FOLDER_PERMISSIONS           = 02765
     FILE_PERMISSIONS             = 0664
     LAST_ECLIPSE_REPOSITORY      = 'https://hudson.eclipse.org/hudson/job/koneki-ldt/lastSuccessfulBuild/artifact/product/target/repository/*zip*/repository.zip'
     PRODUCT_ARCHIVE_FILENAMES    = ['org.eclipse.koneki.ldt.product-linux.gtk.x86_64.tar.gz',

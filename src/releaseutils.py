@@ -27,13 +27,16 @@ def activatestats(xmlstring, openresultfile):
 
     # Adding 'download.stats' to artifact 'org.eclipse.koneki.ldt'
     for artifact in root.findall('./artifacts/artifact[@id="org.eclipse.koneki.ldt"]'):
-        version = artifact.get('version')
-        for properties in artifact.findall('./properties'):
-            ElementTree.SubElement(properties, 'property',{
-                'name'  : 'download.stats',
-                'value' : 'org.eclipse.koneki.ldt_{0}'.format(version)})
-            properties.set('size', str(len(properties)))
-            isvaluesetted = True
+
+        # Activating stat only on feature
+        if artifact.get('classifier') == 'org.eclipse.update.feature':
+            version = artifact.get('version')
+            for properties in artifact.findall('./properties'):
+                ElementTree.SubElement(properties, 'property',{
+                    'name'  : 'download.stats',
+                    'value' : 'org.eclipse.koneki.ldt_{0}'.format(version)})
+                properties.set('size', str(len(properties)))
+                isvaluesetted = True
 
     # Notify in case of error
     if not isvaluesetted:
@@ -68,7 +71,7 @@ def addxmlchild(xmlstring, childlocation):
 def applydirpermisions(folder):
     sys.stdout.write('Setting permissions on {0}: '.format(folder))
     try:
-        os.chmod(folder, 02765)
+        os.chmod(folder, Const.FOLDER_PERMISSIONS)
         sys.stdout.write('Done\n')
     except OSError as ex:
         sys.stdout.write('Error.\nUnable to set permissions on {0}.\n{1}'\

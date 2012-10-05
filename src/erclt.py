@@ -38,7 +38,7 @@ class MilestoneAction(argparse.Action):
                 Const.ARTIFACT_FILE)
         milestone_content_path  = '{0}{1}'.format(milestone_dir,
                 Const.CONTENT_FILE)
-        archived_milestone_path = '{0}{1}{2}'.format(args.directory,
+        archived_milestone_path = '{0}{1}{2}'.format(Const.ARCHIVE_PATH,
                 Const.ARCHIVE_MILESTONE, args.oldversion)
         current_product_milestone_path  = '{0}{1}'.format(args.directory,
                 Const.PRODUCT_CURRENT_MILESTONE)
@@ -78,8 +78,13 @@ class MilestoneAction(argparse.Action):
             sys.stdout.write('Copy {0} to {1}: '.format(nightly_dir, milestone_dir))
             shutil.copytree(nightly_dir, milestone_dir)
             sys.stdout.write('Done\n')
+            parent = os.path.dirname(os.path.normpath(milestone_dir))
+            sys.stdout.write('Setting permissions on repository parent {0}: '\
+                    .format(parent))
+            os.chmod(parent, Const.FOLDER_PERMISSIONS)
+            sys.stdout.write('Done\n')
         except OSError as ex:
-            sys.stdout.write('Failure\n{0}'.format(ex.message))
+            sys.stdout.write('Error.\n{0}'.format(ex))
             sys.exit(1)
 
         # XML fun
@@ -155,7 +160,6 @@ class MilestoneAction(argparse.Action):
                 file.write(xmlcontent)
                 file.close()
                 sys.stdout.write('Done\n')
-
 
         except ValueError as e:
             sys.stdout.write('Error.\nUnable to handle XML.\n{0}'.format(e))
