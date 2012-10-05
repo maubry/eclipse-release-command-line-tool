@@ -26,10 +26,11 @@ def activatestats(xmlstring, openresultfile):
         isvaluesetted = False
 
     # Adding 'download.stats' to artifact 'org.eclipse.koneki.ldt'
-    for artifact in root.findall('./artifacts/artifact[@id="org.eclipse.koneki.ldt"]'):
+    for artifact in root.findall('./artifacts/artifact'):
 
         # Activating stat only on feature
-        if artifact.get('classifier') == 'org.eclipse.update.feature':
+        if artifact.get('classifier') == 'org.eclipse.update.feature' and \
+                artifact.get('id') == 'org.eclipse.koneki.ldt':
             version = artifact.get('version')
             for properties in artifact.findall('./properties'):
                 ElementTree.SubElement(properties, 'property',{

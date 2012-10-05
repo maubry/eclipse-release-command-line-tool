@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.6
 # vi: sw=4 ts=4 expandtab smarttab ai smartindent
 import argparse
 from   consts import Const
