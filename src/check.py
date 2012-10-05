@@ -3,6 +3,7 @@
 import argparse
 from   consts import Const
 import os
+import releaseutils
 import shutil
 import sys
 import tempfile
@@ -133,9 +134,9 @@ try:
     xmldir = os.path.join(tmpdir, Const.RELEASE_MILESTONES_DIR)
     files = {
         os.path.join(xmldir, Const.COMPOSITE_CONTENT_XML_FILENAME):
-            Const.COMPOSITE_CONTENT_XML,
+            releaseutils.compositecontentxml(),
         os.path.join(xmldir, Const.COMPOSITE_ARTIFACTS_XML_FILENAME):
-            Const.COMPOSITE_ARTIFACTS_XML}
+            releaseutils.compositeartifactsxml()}
     for path, content in files.iteritems():
         print 'Creating {0}.'.format(path)
         xmlfile = open(path, 'w')

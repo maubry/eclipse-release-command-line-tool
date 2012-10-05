@@ -3,6 +3,7 @@ from   consts import Const
 import os
 import StringIO
 import sys
+import time
 import xml.etree.ElementTree as ElementTree
 def activatestats(xmlstring, openresultfile):
     """Add statistics values to artifact xml."""
@@ -99,3 +100,27 @@ def checkpermissions(parent_folder, files):
                         .format(file, e.strerror))
                 return False
     return True
+
+def compositeartifactsxml(version='', times=str(long(time.time()))):
+    return """<?xml version='1.0' encoding='UTF-8'?>
+    <?compositeArtifactRepository version='1.0.0'?>
+    <repository name='Eclipse Koneki Update Site {0}'
+            type='org.eclipse.equinox.internal.p2.artifact.repository.CompositeArtifactRepository'
+            version='1.0.0'>
+        <properties size='1'>
+            <property name='p2.timestamp' value='{1}'/>
+        </properties>
+        <children size='0'></children>
+    </repository>""".format(version, times)
+
+def compositecontentxml(version='', times=str(long(time.time()))):
+    return  """<?xml version='1.0' encoding='UTF-8'?>
+    <?compositeMetadataRepository version='1.0.0'?>
+    <repository name='Eclipse Koneki Update Site {0}'
+            type='org.eclipse.equinox.internal.p2.metadata.repository.CompositeMetadataRepository'
+            version='1.0.0'>
+    <properties size='1'>
+        <property name='p2.timestamp' value='{1}'/>
+    </properties>
+    <children size='0'></children>
+    </repository>""".format(version, times)

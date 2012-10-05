@@ -145,8 +145,11 @@ class MilestoneAction(argparse.Action):
             # nested in 'ldt' folder
             #
             currentversionroot = os.path.dirname(os.path.realpath(milestone_dir))
-            filelist = {Const.COMPOSITE_CONTENT_XML_FILENAME:Const.COMPOSITE_CONTENT_XML,
-                    Const.COMPOSITE_ARTIFACTS_XML_FILENAME:Const.COMPOSITE_ARTIFACTS_XML}
+            filelist = {
+                    Const.COMPOSITE_CONTENT_XML_FILENAME:
+                        releaseutils.compositecontentxml(args.newversion),
+                    Const.COMPOSITE_ARTIFACTS_XML_FILENAME:
+                        releaseutils.compositeartifactsxml(args.newversion)}
             for xmlfile, xmlcontent in filelist.items():
 
                 # Creating up-to-date XML
