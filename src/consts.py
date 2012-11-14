@@ -13,7 +13,7 @@ class Const:
     RELEASE_MILESTONES_DIR       = 'releases/milestones'
     ARTIFACT_MANIFEST            = 'artifacts.xml'
     ARTIFACT_FOLDER              = 'repository/'
-    FOLDER_PERMISSIONS           = 02765
+    FOLDER_PERMISSIONS           = 02775
     FILE_PERMISSIONS             = 0664
     LAST_ECLIPSE_REPOSITORY      = 'https://hudson.eclipse.org/hudson/job/koneki-ldt/lastSuccessfulBuild/artifact/product/target/repository/*zip*/repository.zip'
     COMPOSITE_ARTIFACTS_XML_FILENAME = 'compositeArtifacts.xml'
