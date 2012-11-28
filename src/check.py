@@ -1,7 +1,8 @@
 #!/usr/bin/python2.6
 # vi: sw=4 ts=4 expandtab smarttab ai smartindent
 import argparse
-from   consts import Const
+from   consts    import Const
+from   eclipsefs import EclipseFS
 import os
 import releaseutils
 import shutil
@@ -9,8 +10,9 @@ import sys
 import tempfile
 import urllib2
 import zipfile
+
 class CheckConsts:
-    ARTIFACT_FILE_PATH      = 'archive.zip'
+    ARTIFACT_FILE           = 'archive.zip'
     ARTIFACT_FOLDER         = 'repository/'
     LAST_ECLIPSE_REPOSITORY = 'https://hudson.eclipse.org/hudson/job/koneki-ldt/lastSuccessfulBuild/artifact/product/target/repository/*zip*/repository.zip'
     LAST_ECLIPSE_PRODUCT    = 'https://hudson.eclipse.org/hudson/view/All/job/koneki-ldt/lastSuccessfulBuild/artifact/product/target/products/'
@@ -23,7 +25,7 @@ def download(url, dst):
         shutil.copyfileobj(remote_file, artifact_file)
     except IOError as e:
         print e
-        shutil.rmtree(tmpdir)
+        shutil.rmtree(dst)
         return False
     finally:
         artifact_file.close()
@@ -32,31 +34,34 @@ def download(url, dst):
 
 # Creating parsing arguments
 parser = argparse.ArgumentParser(
-        description='Create the files properly to run deploy script.')
+        description='Create an arborensce similar to build.eclipse.org in order to test deploy script safely.')
 parser.add_argument('-a', '--artifacts',
-        help    = 'Artifacts zip file path',
-        metavar = 'artifacts_zip_path',
+        help    = 'Zip file which contains the `repository/` folder available under `konekisources/product/target/`.',
+        metavar = 'repository_zip',
         nargs   = '?')
 parser.add_argument('-p', '--products',
-        help  = 'List of archived products to deploy.',
-        nargs = '*')
+        help    = 'Product archives to place in arborescence.',
+        metavar = 'procuct_archive',
+        nargs   = '*')
 arguments = parser.parse_args()
-tmpdir = tempfile.mkdtemp()
-print 'Everything will happen under temporary folder {0}.'.format(tmpdir)
+
+# TODO Is it useful to create an EclipseFS implementation for testing?
+eclipsefs = EclipseFS(0, 0)
+print 'Everything will happen under temporary folder {0}.'.format(
+        eclipsefs.root())
 
 # Ensure we have a products list
 internetproducts = False
 if not arguments.products:
     internetproducts =  True
-    arguments.products = \
-            ['{0}{1}'.format(CheckConsts.LAST_ECLIPSE_PRODUCT, x)
-                    for x in Const.PRODUCT_ARCHIVE_FILENAMES]
+    arguments.products = ['{0}{1}'.format(CheckConsts.LAST_ECLIPSE_PRODUCT, x)
+            for x in EclipseFS.PRODUCT_ARCHIVE_FILENAMES]
 else:
     # Ensure user provided products files exist
     for prod in arguments.products:
         if not os.path.exists(prod):
             print 'Product {0} does not exist.'.format(prod)
-            shutil.rmtree(tmpdir)
+            shutil.rmtree(eclipsefs.root())
             sys.exit(1)
 
 # Ensure we got an artifact
@@ -67,37 +72,44 @@ if arguments.artifacts:
         print 'Using artifacts available at {0}.'.format(filepath)
     else:
         print '{0} does not exists.'.format(arguments.artifacts)
-        shutil.rmtree(tmpdir)
+        shutil.rmtree(eclipsefs.root())
         sys.exit(1)
 else:
     # Downloading last sucessful build
-    filepath = os.path.join(tmpdir, CheckConsts.ARTIFACT_FILE_PATH)
-    print 'Downloading {0}.'.format(CheckConsts.LAST_ECLIPSE_REPOSITORY)
+    filepath = os.path.join(eclipsefs.ci_repository(), CheckConsts.ARTIFACT_FILE)
+    print 'Downloading {0} under {1}.'.format(
+            CheckConsts.LAST_ECLIPSE_REPOSITORY, filepath)
     try:
-        artifact_file = open(filepath, 'w+b')
-        remote_file = urllib2.urlopen(CheckConsts.LAST_ECLIPSE_REPOSITORY)
-        shutil.copyfileobj(remote_file, artifact_file)
+        # Creating directory
+        os.makedirs(eclipsefs.ci_repository(), Const.FOLDER_PERMISSIONS)
+        download(CheckConsts.LAST_ECLIPSE_REPOSITORY, filepath)
     except IOError as e:
-        print e.strerror
-        shutil.rmtree(tmpdir)
+        print e
+        shutil.rmtree(eclipsefs.root())
         sys.exit(1)
-    finally:
-        artifact_file.close()
-        remote_file.close()
     print 'Successfully downloaded to {0}.'.format(filepath)
 
 # Downloading products
 tempproducts = []
 if internetproducts:
-    tempproducts = [os.path.join(tmpdir, path)
-            for path in Const.PRODUCT_ARCHIVE_FILENAMES]
+    # Creating directory for product download
+    try:
+        product_folder = eclipsefs.ci_product()
+        print 'Creating {0}.'.format( product_folder )
+        os.makedirs( product_folder )
+    except OSError as e:
+        print 'Unable to create {0}.\n{1}'.format(product_folder, e)
+        shutil.rmtree(eclipsefs.root())
+        sys.exit(1)
+
+    tempproducts = eclipsefs.ci_products()
     for i in range(len(tempproducts)):
-        print 'Downloading {0} to {1}.'.format(arguments.products[i],
+        print 'Downloading {0}\n\tto {1}.'.format(arguments.products[i],
                 tempproducts[i])
         if not download(arguments.products[i], tempproducts[i]):
             print 'Unable to downloading {0} to {1}.'.format(arguments.products[i],
                     tempproducts[i])
-            shutil.rmtree(tmpdir)
+            shutil.rmtree(eclipsefs.root())
             sys.exit(1)
 
     # Use downloaded products
@@ -107,64 +119,80 @@ if internetproducts:
 # Unzipping artifacts
 artifact_zip = zipfile.ZipFile(filepath)
 try:
-    print 'Unzipping {0} under {1}.'.format(filepath, tmpdir)
-    artifact_zip.extractall(tmpdir)
-    print 'Unzipped under {0}.'.format(tmpdir)
+    ci = eclipsefs.ci()
+    print 'Unzipping {0} under {1}.'.format(filepath, ci)
+    artifact_zip.extractall(ci)
+    print 'Unzipped under {0}.'.format(ci)
 except IOError as e:
-    print e
-    shutil.rmtree(tmpdir)
+    print 'Unable to extract {0} under {1}.\n{2}'.format(filepath, ci, e)
+    shutil.rmtree(eclipsefs.root())
     sys.exit(1)
 finally:
     artifact_zip.close()
 
-# Define folder names
-nightlypath = os.path.join(tmpdir, Const.NIGHTLY_OUTPUT_DIR)
-ldt_nightly_path = '{0}{1}'.format(nightlypath, Const.LDT_SUB_DIRECTORY)
-artifact_content = os.path.join(tmpdir, Const.ARTIFACT_FOLDER)
-
 # Creating file tree
 try:
     # Creating directories
-    for directory in [Const.RELEASE_MILESTONES_DIR, 'products/milestones']:
-        dir_to_create = os.path.join(tmpdir, directory)
-        os.makedirs(dir_to_create)
-        print '{0} created.'.format(dir_to_create)
+    milestones = eclipsefs.milestones()
+    os.makedirs(milestones)
+    print '{0} created.'.format(milestones)
 
+    #
     # Creating p2 xml
-    xmldir = os.path.join(tmpdir, Const.RELEASE_MILESTONES_DIR)
+    #
+
     files = {
-        os.path.join(xmldir, Const.COMPOSITE_CONTENT_XML_FILENAME):
+        eclipsefs.milestones_composite_content():
             releaseutils.compositecontentxml(),
-        os.path.join(xmldir, Const.COMPOSITE_ARTIFACTS_XML_FILENAME):
-            releaseutils.compositeartifactsxml()}
-    for path, content in files.iteritems():
-        print 'Creating {0}.'.format(path)
-        xmlfile = open(path, 'w')
+        eclipsefs.milestones_composite_artifacts():
+            releaseutils.compositeartifactsxml()
+    }
+    for xml_file_path, content in files.iteritems():
+
+        # Creating parent folder
+        directory = os.path.dirname(xml_file_path)
+        if not os.path.exists( directory ):
+            print 'Creating {0}.'.format( directory )
+            os.makedirs( directory )
+
+        # Creating XML files
+        print 'Creating {0}.'.format(xml_file_path)
+        xmlfile = open(xml_file_path, 'w')
         xmlfile.write(content)
         xmlfile.close()
 
     # Copying artifacts under right directories
-    print 'Copying artifacts files from {0} to {1}.'.format(artifact_content,
-            ldt_nightly_path)
-    shutil.copytree(artifact_content, ldt_nightly_path)
-    print 'Copy of eclipse release structure available under {0}.'.\
-            format(tmpdir)
+    nightly = eclipsefs.nightly()
+    print 'Copying artifacts files from {0} to {1}.'.format(
+            eclipsefs.ci_repository(), nightly)
+    shutil.copytree(eclipsefs.ci_repository(), nightly)
+    print 'Copy of update-site available under {0}.'.\
+            format(nightly)
 
     # Packing products
-    productspath = os.path.join(tmpdir, 'products/current-milestone')
-    os.mkdir(productspath)
-    print 'Packing products in {0}.'.format(productspath)
-    for file in arguments.products:
+    product_milestone = eclipsefs.product_current_milestone()
+    os.makedirs(product_milestone)
+    print 'Packing products in {0}.'.format(product_milestone)
+    for product in arguments.products:
+        shutil.copy(product, product_milestone)
+    print 'Products available under {0}.'.format(product_milestone)
+
+    # Copy products to continuous integration
+    ci_product = eclipsefs.ci_product()
+    print 'Creating {0}.'.format( ci_product )
+    os.makedirs(ci_product)
+    print 'Packing products in continuous integration under {0}.'.format(
+            ci_product)
+    for product in arguments.products:
         if internetproducts:
-            shutil.move(file, productspath)
+            shutil.move(product, ci_product)
         else:
-            shutil.copy(file, productspath)
-    print 'Products available at {0}.'.format(productspath)
+            shutil.copy(product, ci_product)
+    print 'Products available under {0}.'.format(ci_product)
 except OSError as e:
     print 'Unable create test tree, {0}. '.format(e)
-    shutil.rmtree(tmpdir)
+    root = eclipsefs.root()
+    print 'Flushing {0}.'.format( root )
+    shutil.rmtree( root )
     sys.exit(1)
-finally:
-    shutil.rmtree(artifact_content)
-    print 'Flushing extracted artifacts at {0}.'.format( artifact_content )
-print 'All good.'
+print 'All good, available under {0}.'.format( eclipsefs.root() )

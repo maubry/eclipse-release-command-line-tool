@@ -2,10 +2,11 @@
 # vi: sw=4 ts=4 expandtab smarttab ai smartindent
 import argparse
 from   consts import Const
+from   eclipsefs import EclipseFS
 import os
 import releaseutils
 import shutil
-import StringIO
+from   StringIO import StringIO
 import sys
 import zipfile
 
@@ -15,8 +16,6 @@ import zipfile
 #   error code per error type.
 # * At the beginning of MilestoneAction, there a lot of pathes defined, we
 #   should take time to comment how the look like.
-# * Store all the pathes in a dict to enable path nomalisation
-#   ( ex. using os.path.normpath )
 
 #
 # Defining Actions
@@ -26,62 +25,47 @@ class MilestoneAction(argparse.Action):
         """Milestone production action"""
 
         # Compute requested pathes
-        if not args.directory.endswith('/'):
-            args.directory = '{0}/'.format(args.directory)
-        nightly_dir   = '{0}{1}{2}'.format(args.directory,
-                Const.NIGHTLY_OUTPUT_DIR, Const.LDT_SUB_DIRECTORY)
-        milestone_dirs = '{0}{1}'.format(args.directory,
-                Const.RELEASE_MILESTONES_DIR) 
-        milestone_dir = '{0}/{1}/{2}'.format(milestone_dirs, args.newversion,
-                Const.LDT_SUB_DIRECTORY)
-        milestone_artifact_path = '{0}{1}'.format(milestone_dir,
-                Const.ARTIFACT_FILE)
-        milestone_content_path  = '{0}{1}'.format(milestone_dir,
-                Const.CONTENT_FILE)
-        archived_milestone_path = '{0}{1}{2}'.format(Const.ARCHIVE_PATH,
-                Const.ARCHIVE_MILESTONE, args.oldversion)
-        current_product_milestone_path  = '{0}{1}'.format(args.directory,
-                Const.PRODUCT_CURRENT_MILESTONE)
-        nightly_files = [nightly_dir,
-                '{0}/{1}'.format(nightly_dir, Const.ARTIFACT_FILE),
-                '{0}/{1}'.format(nightly_dir, Const.CONTENT_FILE)]
+        eclipsefs = EclipseFS(args.oldversion, args.newversion, args.directory)
 
         # Check if destination directory exists
-        if os.path.exists(milestone_dir):
-            sys.stdout.write('Destination {0} already exists.\n'.format(
-                milestone_dir))
+        new_milestone = eclipsefs.new_milestone()
+        if os.path.exists(new_milestone):
+            print 'Destination {0} already exists.'.format( new_milestone )
             sys.exit(1)
 
         # Check if input directory exists
-        for file in nightly_files:
+        for file in eclipsefs.nightly_jars():
             if not os.path.exists(file):
-                sys.stdout.write('Error {0} does not exists.\n'.format(file))
+                print 'Error {0} does not exists.'.format( file )
                 sys.exit(1)
 
-        # Check artifacts path
-        if not os.path.exists(args.artifactspath):
-            sys.stdout.write('There are no artifacts at {0}.\n'.format(
-                args.artifactspath))
+        # Check product directory path
+        ci_product = eclipsefs.ci_product()
+        if not os.path.exists(ci_product):
+            print 'There is no continuous integration product folder {0}.'\
+                    .format(ci_product)
             sys.exit(1)
 
-        # Check artifacts path
-        productslist = [ os.path.join(args.productspath, product)
-                for product in os.listdir(args.productspath)
-                    if os.path.isfile(os.path.join(args.productspath, product))]
-        if not os.path.exists(args.productspath) or not productslist:
-            sys.stdout.write('There are no products at {0}.\n'.format(
-                    args.productspath))
-            sys.exit(1)
+        # Check products path
+        productslist = [ os.path.join(ci_product, product)
+                for product in os.listdir(eclipsefs.ci_product())
+                    if os.path.isfile(os.path.join(eclipsefs.ci_product(), product))]
+        for product in eclipsefs.ci_products():
+            if not os.path.exists(product):
+                print 'Product {0} does not exist.'.format( product )
+                sys.exit(1)
 
         # Copy files
         try:
-            sys.stdout.write('Copy {0} to {1}: '.format(nightly_dir, milestone_dir))
-            shutil.copytree(nightly_dir, milestone_dir)
+            nightly = eclipsefs.nightly()
+            new_milestone_nightly = eclipsefs.new_milestone()
+            sys.stdout.write( 'Copy {0} to {1}: '.format(nightly, new_milestone_nightly) )
+            shutil.copytree(nightly, new_milestone_nightly)
             sys.stdout.write('Done\n')
-            parent = os.path.dirname(os.path.normpath(milestone_dir))
+            milestone_parent = os.path.dirname(os.path.normpath(new_milestone_nightly))
             sys.stdout.write('Setting permissions on repository parent {0}: '\
-                    .format(parent))
-            os.chmod(parent, Const.FOLDER_PERMISSIONS)
+                    .format(milestone_parent))
+            os.chmod(milestone_parent, Const.FOLDER_PERMISSIONS)
             sys.stdout.write('Done\n')
         except OSError as ex:
             sys.stdout.write('Error.\n{0}'.format(ex))
@@ -92,13 +76,15 @@ class MilestoneAction(argparse.Action):
             #
             # Activate statistics on repository
             #
+            # TODO: The lines below might be written elsewhere
 
             #Read from archive
+            milestone_artifact_path = eclipsefs.new_milestone_artifacts()
             sys.stdout.write('Opening {0}: '.format(milestone_artifact_path))
-            updatedxmlbuffer = StringIO.StringIO()
+            updatedxmlbuffer = StringIO()
             artifactzip = zipfile.ZipFile(milestone_artifact_path)
-            sys.stdout.write('Done\nReading {0} from {1}: '.format(
-                Const.ARTIFACT_MANIFEST, milestone_artifact_path))
+            sys.stdout.write('Done\nReading {0}: '.format(
+                milestone_artifact_path))
             artifactfilecontent = artifactzip.read(Const.ARTIFACT_MANIFEST)
             artifactzip.close()
 
@@ -108,8 +94,8 @@ class MilestoneAction(argparse.Action):
             releaseutils.activatestats(artifactfilecontent, updatedxmlbuffer)
 
             # Writing in archive
-            sys.stdout.write('Done\nSaving statistics to statistics in {0}: '.\
-                    format(Const.ARTIFACT_MANIFEST))
+            sys.stdout.write('Done\nSaving statistics to {0} in {1}: '.\
+                    format(Const.ARTIFACT_MANIFEST, milestone_artifact_path))
             artifactzip = zipfile.ZipFile(milestone_artifact_path, 'w')
             artifactzip.writestr(Const.ARTIFACT_MANIFEST,
                     updatedxmlbuffer.getvalue())
@@ -119,15 +105,13 @@ class MilestoneAction(argparse.Action):
             # Updating repository compositeArtifacts.xml and
             # compositeContent.xml to tell p2 about this version
             #
-            for xmlfile in [Const.COMPOSITE_CONTENT_XML_FILENAME,
-                    Const.COMPOSITE_ARTIFACTS_XML_FILENAME]:
+            for xml_file_path in eclipsefs.milestones_xml_files():
 
                 # Compute path
-                xmlfilepath = os.path.join(milestone_dirs, xmlfile)
-                sys.stdout.write('Updating {0}: '.format(xmlfilepath))
+                sys.stdout.write('Updating {0}: '.format(xml_file_path))
 
                 # Read content
-                xmlfile = open(xmlfilepath)
+                xmlfile = open(xml_file_path)
                 xml = xmlfile.read()
                 xmlfile.close()
 
@@ -135,7 +119,7 @@ class MilestoneAction(argparse.Action):
                 xml = releaseutils.addxmlchild(xml, args.newversion)
 
                 # Save xml
-                xmlfile = open(xmlfilepath, 'w')
+                xmlfile = open(xml_file_path, 'w')
                 xmlfile.write(xml)
                 xmlfile.close()
                 sys.stdout.write('Done\n')
@@ -144,20 +128,19 @@ class MilestoneAction(argparse.Action):
             # Update parent directory XML to notify that there is a repository
             # nested in 'ldt' folder
             #
-            currentversionroot = os.path.dirname(os.path.realpath(milestone_dir))
             filelist = {
-                    Const.COMPOSITE_CONTENT_XML_FILENAME:
-                        releaseutils.compositecontentxml(args.newversion),
-                    Const.COMPOSITE_ARTIFACTS_XML_FILENAME:
-                        releaseutils.compositeartifactsxml(args.newversion)}
-            for xmlfile, xmlcontent in filelist.items():
+                eclipsefs.milestone_composite_content():
+                    releaseutils.compositecontentxml(args.newversion),
+                eclipsefs.milestone_composite_artifacts():
+                    releaseutils.compositeartifactsxml(args.newversion)
+            }
+            for xmlfilepath, xmlcontent in filelist.items():
 
                 # Creating up-to-date XML
                 xmlcontent = releaseutils.addxmlchild(xmlcontent,
-                        os.path.normpath(Const.LDT_SUB_DIRECTORY))
+                        os.path.normpath(EclipseFS.LDT_SUB_DIRECTORY))
 
                 # Create files
-                xmlfilepath = os.path.join(currentversionroot, xmlfile)
                 sys.stdout.write('Creating {0}: '.format(xmlfilepath))
                 file = open(xmlfilepath, 'w')
                 file.write(xmlcontent)
@@ -168,52 +151,57 @@ class MilestoneAction(argparse.Action):
             sys.stdout.write('Error.\nUnable to handle XML.\n{0}'.format(e))
             sys.exit(1)
         except IOError as e:
-            sys.stdout.write('Error.\nUnable to browse {0}.\n{1}'.format(
-                    milestone_artifact_path, e))
+            sys.stdout.write('Error.\nUnable to read.\n{0}'.format(e))
             sys.exit(1)
         finally:
             artifactzip.close()
             updatedxmlbuffer.close()
 
         # Ensure permissions
-        files = [milestone_artifact_path, milestone_content_path]
-        if not releaseutils.checkpermissions(milestone_dir, files):
+        files = eclipsefs.new_milestone_xml_files()
+        if not releaseutils.checkpermissions(eclipsefs.new_milestone(), files):
+            for f in files:
+                print 'Unable to set permissions on {0}.'.format( f )
             sys.exit(1)
 
         # Archive current milestone
-        sys.stdout.write('Archiving current milestone.\n')
+        print 'Archiving current milestone.'
+        product_current_milestone = eclipsefs.product_current_milestone()
+        product_archive = eclipsefs.product_archive()
         try:
-            sys.stdout.write('Moving {0} to {1}: '.format(current_product_milestone_path,
-                archived_milestone_path))
-            shutil.copytree(current_product_milestone_path, archived_milestone_path)
+            sys.stdout.write('Moving {0} to {1}: '.format(
+                product_current_milestone, product_archive))
+            shutil.copytree(product_current_milestone, product_archive)
             sys.stdout.write('Done\n')
         except OSError as e:
-            sys.stdout.write('Error\nUnable to archive %s.\n%s\n'%(
-                current_product_milestone_path, e.strerror))
+            sys.stdout.write('Error\nUnable to archive {0}.\n{1}\n'.format(
+                product_current_milestone, e))
             sys.exit(1)
 
         # Delivering new version
-        sys.stdout.write('Delivering new version.\n')
+        print 'Delivering new version.'
         try:
             sys.stdout.write('Flushing {0}: '.format(
-                current_product_milestone_path))
-            shutil.rmtree(current_product_milestone_path)
+                product_current_milestone))
+            shutil.rmtree(product_current_milestone)
             sys.stdout.write('Done\n')
 
             sys.stdout.write('Copying products to {0}: '.format(
-                current_product_milestone_path))
-            os.mkdir(current_product_milestone_path)
+                product_current_milestone))
+            os.mkdir(product_current_milestone)
             for product in productslist:
-                shutil.copy(product, current_product_milestone_path)
+                shutil.copy(product, product_current_milestone)
             sys.stdout.write('Done\n')
         except OSError as e:
             sys.stdout.write('Error\nUnable to publish to {0}.\n{1}\n'.format(
-                current_product_milestone_path, e.strerror))
+                product_current_milestone, e))
             sys.exit(1)
 
         # Check files permissions
-        if not releaseutils.checkpermissions(current_product_milestone_path,
+        if not releaseutils.checkpermissions(product_current_milestone,
                 productslist):
+            print 'Error.\nUnable to set permissions on {0}.'.format(
+                    product_current_milestone)
             sys.exit(1)
 
 class ReleaseAction(argparse.Action):
@@ -243,19 +231,9 @@ parser.add_argument('-nv', '--newversion',
         metavar  = 'version_number',
         required = True)
 parser.add_argument('-d', '--directory',
-        default = './',
-        help    = 'All directories used will be relative to this one, defaults to `./`.',
-        metavar = 'dir')
-parser.add_argument('-ap', '--artifactspath',
-        default = Const.LAST_CI_REPOSITORY_PATH,
-        help    = 'Path to the artifacts to release, often last sucessful build form continuous integration.',
-        metavar = 'path_to_artifacts',
-        nargs   = '?')
-parser.add_argument('-p', '--productspath',
-        default = Const.LAST_CI_PRODUCTS_PATH,
-        help    = 'Path to directory which contains product archives, every files found there will be handled as a product.',
-        metavar = 'path_to_products',
-        nargs   = '?')
+        default = '/',
+        help    = 'Root directory of release process, directory must have an arborescence similar to build.eclipse.org. Defaults to `/`.',
+        metavar = 'root')
 
 # Define argument for the type of release we are dealing with.
 # There can be only one type handled at once.

@@ -3,7 +3,8 @@
 Command-line-tools for Eclipse related release. It allow to automatize release at Eclipse with `erclt.py` and to emultate Eclipse file tree with `check.py`.
 
 ## Requirement
-* Python > 2.5 (2.7 is recommended)
+
+* Python 2.6
 
 ## Description
 
@@ -14,12 +15,12 @@ It is the tool, which automatize releases. So far, it is _only able to release m
 #### Usage
 
 ```shell
-$ ./erclt.py -ap /tmp/tmpCzuqtS/artifactpath  -nv 1.0 -ov 0.8  -d /tmp/copyofeclipsedir -m
+$ ./erclt.py  -nv 1.0 -ov 0.8  -d /tmp/copyofeclipsedir -m
 ```
 
 ### check.py
 
-`erclt.py` is supposed to deploy an artifact zip accross a specific file tree, this script recreate this arborescense. It is also able to _download last artifact from Eclipse contiuous integration_.
+`erclt.py` is supposed to deploy an artifact zip accross a specific file tree, `check.py` recreate this arborescense. It is also able to _download last artifact from Eclipse contiuous integration_.
 
 #### Usage
 
@@ -29,6 +30,6 @@ $ ./check.py
 ```
 or
 ```shell
-# This will deploy given artifact
-$ ./check.py -a /tmp/path/toartifact.zip
+# This will deploy given artifact, /d/koneki.ldt contains LDT sources.
+$./check.py -p /d/koneki.ldt/product/target/products/*.tar.gz -a /d/koneki.ldt/product/target/repository.zip
 ```
