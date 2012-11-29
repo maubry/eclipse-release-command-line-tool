@@ -1,6 +1,6 @@
 # eclipse-release-command-line-tool
 
-Command-line-tools for Eclipse related release. It allow to automatize release at Eclipse with `erclt.py` and to emultate Eclipse file tree with `check.py`.
+Command-line-tools for Eclipse related release. It allows to automatize release at Eclipse with `erclt.py` and to emultate Eclipse file tree with `check.py`.
 
 ## Requirement
 
@@ -10,17 +10,17 @@ Command-line-tools for Eclipse related release. It allow to automatize release a
 
 ### erclt.py
 
-It is the tool, which automatize releases. So far, it is _only able to release milestones_.
+It is the tool, which automatizes releases. So far, it is _only able to release milestones_.
 
 #### Usage
 
 ```shell
-$ ./erclt.py  -nv 1.0 -ov 0.8  -d /tmp/copyofeclipsedir -m
+$ ./erclt.py -nv 1.0 -ov 0.8 -d /tmp/copyofeclipsedir -m
 ```
 
 ### check.py
 
-`erclt.py` is supposed to deploy an artifact zip accross a specific file tree, `check.py` recreate this arborescense. It is also able to _download last artifact from Eclipse contiuous integration_.
+`erclt.py` is supposed to deploy artifacts and products archives accross a specific file tree, `check.py` recreates this arborescense. It is also able to _download last artifacts and products from Eclipse contiuous integration_.
 
 #### Usage
 
