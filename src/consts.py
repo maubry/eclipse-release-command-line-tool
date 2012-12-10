@@ -5,3 +5,7 @@ class Const:
     FOLDER_PERMISSIONS           = 02775
     FILE_PERMISSIONS             = 0664
     LAST_ECLIPSE_REPOSITORY      = 'https://hudson.eclipse.org/hudson/job/koneki-ldt/lastSuccessfulBuild/artifact/product/target/repository/*zip*/repository.zip'
+
+
+    COMPOSITE_REPOSITORY_ARTIFACTS_XML      = 'artifacts.xml'
+    COMPOSITE_REPOSITORY_CONTENT_XML      = 'artifacts.xml'

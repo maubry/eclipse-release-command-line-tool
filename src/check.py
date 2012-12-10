@@ -14,8 +14,8 @@ import zipfile
 class CheckConsts:
     ARTIFACT_FILE           = 'archive.zip'
     ARTIFACT_FOLDER         = 'repository/'
-    LAST_ECLIPSE_REPOSITORY = 'https://hudson.eclipse.org/hudson/job/koneki-ldt/lastSuccessfulBuild/artifact/product/target/repository/*zip*/repository.zip'
-    LAST_ECLIPSE_PRODUCT    = 'https://hudson.eclipse.org/hudson/view/All/job/koneki-ldt/lastSuccessfulBuild/artifact/product/target/products/'
+    LAST_ECLIPSE_REPOSITORY = 'https://jenkins.anyware/eclipse/job/koneki-ldt/lastSuccessfulBuild/artifact/product/target/repository/*zip*/repository.zip'
+    LAST_ECLIPSE_PRODUCT    = 'https://jenkins.anyware/eclipse/job/koneki-ldt/lastSuccessfulBuild/artifact/product/target/products/'
 
 def download(url, dst):
     """Download provided url to a file at provided file path."""
@@ -178,17 +178,15 @@ try:
     print 'Products available under {0}.'.format(product_milestone)
 
     # Copy products to continuous integration
-    ci_product = eclipsefs.ci_product()
-    print 'Creating {0}.'.format( ci_product )
-    os.makedirs(ci_product)
-    print 'Packing products in continuous integration under {0}.'.format(
-            ci_product)
-    for product in arguments.products:
-        if internetproducts:
-            shutil.move(product, ci_product)
-        else:
+    if not internetproducts :
+        ci_product = eclipsefs.ci_product()
+        print 'Creating {0}.'.format( ci_product )
+        os.makedirs(ci_product)
+        print 'Packing products in continuous integration under {0}.'.format(
+                ci_product)
+        for product in arguments.products:
             shutil.copy(product, ci_product)
-    print 'Products available under {0}.'.format(ci_product)
+        print 'Products available under {0}.'.format(ci_product)
 except OSError as e:
     print 'Unable create test tree, {0}. '.format(e)
     root = eclipsefs.root()
