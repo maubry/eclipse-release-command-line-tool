@@ -1,86 +1,133 @@
 # vi: sw=4 ts=4 expandtab smarttab ai smartindent
-import tempfile
-from os.path import join
+import os
 
 class EclipseFS:
-
     """Representation of build.eclipse.org file system, all needed path are computed here.
     There is no file system operation performed, only the path management is performed here."""
 
     # List of products name
-    PRODUCT_FILENAMES = {'ldt':
+    _PRODUCT_FILENAMES = {'ldt':
                               ['org.eclipse.koneki.ldt.product-linux.gtk.x86_64.tar.gz',
                                'org.eclipse.koneki.ldt.product-macosx.cocoa.x86_64.tar.gz',
                                'org.eclipse.koneki.ldt.product-win32.win32.x86.zip',
                                'org.eclipse.koneki.ldt.product-linux.gtk.x86.tar.gz',
                                'org.eclipse.koneki.ldt.product-win32.win32.x86_64.zip']}
     
+    _STATS_URI = {'ldt':'http://download.eclipse.org/stats/koneki'}
     
-    # Continuous integration folders
-    _CI = 'shared/jobs/koneki-ldt/lastSuccessful/archive/product/target/'
-    _CI_PRODUCT = 'products/'
-    _CI_REPO = 'repository/'
+    _FEATURE_ID = {'ldt':'org.eclipse.koneki.ldt'}
     
+    def __init__(self, root=None):
+        # root is used for test only      
+        if not root:
+            root='/' 
+        
+        # Download constant
+        self.DOWNLOAD_ROOT_DIRECTORY = os.path.join(root,'home/data/httpd/download.eclipse.org/koneki/')
     
-    _HOME = 'home/data/httpd/download.eclipse.org/koneki/'
-    LDT_SUB_DIRECTORY = 'ldt/'
-    _NIGHTLY = 'updates-nightly/{0}'.format(LDT_SUB_DIRECTORY)
-
-    # Release
-    _RELEASED_MILESTONES = 'releases/milestones'
-
-    # Current milestone
-    _CURRENT_MILESTONE = 'products/current-milestone/'
-
-    _PRODUCT_CURRENT_MILESTONE = 'products/current-milestone/'  
-
-    # Archive
-    _ARCHIVE = 'home/data/httpd/archive.eclipse.org/koneki/'
-    _ARCHIVE_PRODUCT = '{0}products/milestones/'.format(_ARCHIVE)
+        self.RELEASE_ROOT_PRODUCTS_DIRECTORY = self.DOWNLOAD_ROOT_DIRECTORY + 'products/'
+        self.RELEASE_MILESTONES_PRODUCTS_DIRECTORY = self.RELEASE_ROOT_PRODUCTS_DIRECTORY + 'milestones/'
+        self.RELEASE_STABLE_PRODUCTS_DIRECTORY = self.RELEASE_ROOT_PRODUCTS_DIRECTORY + 'stable/'
     
-    # File name constant
-    PRODUCT_FILENAMES = ['org.eclipse.koneki.ldt.product-linux.gtk.x86_64.tar.gz',
-                    'org.eclipse.koneki.ldt.product-macosx.cocoa.x86_64.tar.gz',
-                    'org.eclipse.koneki.ldt.product-win32.win32.x86.zip',
-                    'org.eclipse.koneki.ldt.product-linux.gtk.x86.tar.gz',
-                    'org.eclipse.koneki.ldt.product-win32.win32.x86_64.zip']
-   
-    # DOWNLOAD constant
-    _DOWNLOAD_ROOT_DIRECTORY = 'home/data/httpd/download.eclipse.org/koneki/'
-
-    _RELEASE_ROOT_PRODUCTS_DIRECTORY = _DOWNLOAD_ROOT_DIRECTORY + 'products/'
-    _RELEASE_MILESTONE_PRODUCTS_DIRECTORY = _RELEASE_ROOT_PRODUCTS_DIRECTORY + 'current-milestone/'
-    _RELEASE_STABLE_PRODUCTS_DIRECTORY = _RELEASE_ROOT_PRODUCTS_DIRECTORY + 'stable/'
-
-    _RELEASE_ROOT_REPOSITORY = _DOWNLOAD_ROOT_DIRECTORY + 'releases/'
-    _RELEASE_STABLE_REPOSITORY = _RELEASE_ROOT_REPOSITORY + 'stable/'
-    _RELEASE_MILESTONES_REPOSITORY = _RELEASE_ROOT_REPOSITORY + 'milestones/'
+        self.RELEASE_ROOT_REPOSITORY = self.DOWNLOAD_ROOT_DIRECTORY + 'releases/'
+        self.RELEASE_STABLE_REPOSITORY = self.RELEASE_ROOT_REPOSITORY + 'stable/'
+        self.RELEASE_MILESTONES_REPOSITORY = self.RELEASE_ROOT_REPOSITORY + 'milestones/'
+        
+        self.NIGHTLY_REPOSITORY = self.DOWNLOAD_ROOT_DIRECTORY + "updates-nightly/"
+        self.NIGHTLY_MAINTENANCE_REPOSITORY = self.DOWNLOAD_ROOT_DIRECTORY + "updates-nightly-maintenance/"
+        
+        # strange case for products we search the nightly on continuous integration
+        self.CONTINUOUS_INTEGRATION_ROOT = os.path.join(root,"shared/jobs/")
+        self.NIGHTLY_PRODUCTS_DIRECTORY = self.CONTINUOUS_INTEGRATION_ROOT + "koneki-{0}/lastSuccessful/archive/product/target/products/"
+        self.NIGHTLY_MAINTENANCE_PRODUCTS_DIRECTORY = self.CONTINUOUS_INTEGRATION_ROOT + "koneki-{0}-maintenance/lastSuccessful/archive/product/target/products/"
+        
+        # Archive constant
+        self.ARCHIVE_ROOT_DIRECTORY = os.path.join(root,'home/data/httpd/archive.eclipse.org/koneki/')
+        
+        self.ARCHIVE_ROOT_PRODUCTS_DIRECTORY = self.ARCHIVE_ROOT_DIRECTORY + 'products/'
+        self.ARCHIVE_MILESTONES_PRODUCTS_DIRECTORY = self.ARCHIVE_ROOT_PRODUCTS_DIRECTORY + 'milestones/'
+        self.ARCHIVE_STABLE_PRODUCTS_DIRECTORY = self.ARCHIVE_ROOT_PRODUCTS_DIRECTORY + 'stable/'
+        
+        self.ARCHIVE_ROOT_REPOSITORY = self.ARCHIVE_ROOT_DIRECTORY + 'releases/'
+        self.ARCHIVE_STABLE_REPOSITORY = self.ARCHIVE_ROOT_REPOSITORY + 'stable/'
+        self.ARCHIVE_MILESTONES_REPOSITORY = self.ARCHIVE_ROOT_REPOSITORY + 'milestones/'
     
-    _NIGHTLY_REPOSITORY = _DOWNLOAD_ROOT_DIRECTORY + "updates-nightly/"
-    _NIGHTLY_MAINTENANCE_REPOSITORY = _DOWNLOAD_ROOT_DIRECTORY + "updates-nightly-maintenance/"
-
-    # Archive constant
-    _ARCHIVE_ROOT_DIRECTORY = 'home/data/httpd/archive.eclipse.org/koneki/'
+    # products name
+    ############################
+    def products_filenames(self,product):
+        return self._PRODUCT_FILENAMES[product]
     
-    _ARCHIVE_ROOT_PRODUCTS_DIRECTORY = _ARCHIVE_ROOT_DIRECTORY + 'products/'
-    _ARCHIVE_MILESTONES_PRODUCTS_DIRECTORY = _ARCHIVE_ROOT_PRODUCTS_DIRECTORY + 'milestones/'
-    _ARCHIVE_STABLE_PRODUCTS_DIRECTORY = _ARCHIVE_ROOT_PRODUCTS_DIRECTORY + 'stable/'
+    # statistics
+    ############################
+    def stats_uri(self,product):
+        return self._STATS_URI[product]
     
-    _ARCHIVE_ROOT_REPOSITORY = _ARCHIVE_ROOT_DIRECTORY + 'releases/'
-    _ARCHIVE_STABLE_REPOSITORY = _ARCHIVE_ROOT_REPOSITORY + 'stable/'
-    _ARCHIVE_MILESTONES_REPOSITORY = _ARCHIVE_ROOT_REPOSITORY + 'milestones/'
+    def feature_id(self,product):
+        return self._FEATURE_ID[product]
+        
+    # Release paths
+    ############################
+    def release_stable_composite_repository(self, product):
+        return os.path.join(self.RELEASE_STABLE_REPOSITORY, product)
     
+    def release_stable_repository(self, product, version):
+        return os.path.join(self.RELEASE_STABLE_REPOSITORY, product,version)
+    
+    def release_stable_allversion_products_directory(self,product):
+        return os.path.join(self.RELEASE_STABLE_PRODUCTS_DIRECTORY,product)
 
-    def __init__(self, oldversion, newversion, root=None):
+    def release_stable_products_directory(self,product,version):
+        return os.path.join(self.RELEASE_STABLE_PRODUCTS_DIRECTORY,product,version)
+    
+    def release_milestones_composite_repository(self, product):
+        return os.path.join(self.RELEASE_MILESTONES_REPOSITORY, product)
+    
+    def release_milestones_repository(self, product, version):
+        return os.path.join(self.RELEASE_MILESTONES_REPOSITORY, product,version)
+        
+    def release_milestones_allversion_products_directory(self,product):
+        return os.path.join(self.RELEASE_MILESTONES_PRODUCTS_DIRECTORY,product)
 
-        # Remember required versions
-        self._old_version = oldversion
-        self._new_version = newversion
+    def release_milestones_products_directory(self,product,version):
+        return os.path.join(self.RELEASE_MILESTONES_PRODUCTS_DIRECTORY,product,version)
+    
+    # Archive paths
+    ############################
+    def archive_stable_composite_repository(self, product):
+        return os.path.join(self.ARCHIVE_STABLE_REPOSITORY, product)
+    
+    def archive_stable_repository(self, product, version):
+        return os.path.join(self.ARCHIVE_STABLE_REPOSITORY, product,version)
+    
+    def archive_stable_allversion_products_directory(self,product):
+        return os.path.join(self.ARCHIVE_STABLE_PRODUCTS_DIRECTORY,product)
 
-        # Define the root of the arborescence we are about to create
-        self._rootFolder = tempfile.mkdtemp() if root is None else root
+    def archive_stable_products_directory(self,product,version):
+        return os.path.join(self.ARCHIVE_STABLE_PRODUCTS_DIRECTORY,product,version)
+    
+    def archive_milestones_composite_repository(self, product):
+        return os.path.join(self.ARCHIVE_MILESTONES_REPOSITORY, product)
+    
+    def archive_milestones_repository(self, product, version):
+        return os.path.join(self.ARCHIVE_MILESTONES_REPOSITORY, product,version)
 
-        # Continuous integration forlders
-        self._ci = join(self.root(), EclipseFS._CI)
+    def archive_milestones_allversion_products_directory(self,product):
+        return os.path.join(self.ARCHIVE_MILESTONES_PRODUCTS_DIRECTORY,product)
 
-
+    def archive_milestones_products_directory(self,product,version):
+        return os.path.join(self.ARCHIVE_MILESTONES_PRODUCTS_DIRECTORY,product,version)
+    
+    # Nightly paths
+    ############################
+    def nightly_repository(self,product):
+        return os.path.join(self.NIGHTLY_REPOSITORY,product)
+    
+    def nightly_products_directory(self,product):
+        return self.NIGHTLY_PRODUCTS_DIRECTORY.format(product)
+    
+    def nightly_maintenance_products_directory(self,product):
+        return self.NIGHTLY_MAINTENANCE_PRODUCTS_DIRECTORY.format(product)
+    
+    def nightly_maintenance_repository(self,product):
+        return os.path.join(self.NIGHTLY_MAINTENANCE_REPOSITORY,product)
+    

@@ -36,7 +36,7 @@ class MoveAllRepositoryChildren:
         # move all children
         for child_name in repositoryutils.composite_repository_list_child(self._source):
             repositoryutils.move_child_from_composite_repository(self._source, self._dest, child_name,child_name)
-            report.append("{0} moved".format(child_name))
+            report.append("Repo {0} moved".format(child_name))
 
         if len(report) == 0:
             report.append("Nothing to do.")

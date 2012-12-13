@@ -2,6 +2,7 @@
     add a repository to a given composite repository
 '''
 import repositoryutils
+import os
 class PublishRepository:
     
     def __init__(self, name, source_path, dest_path,repository_name,stats_uri,feature_id):
@@ -22,8 +23,8 @@ class PublishRepository:
             raise Exception("destination {0} is not a composite repository".format(self._dest_path))
         
         # check if destination does not already contains the repository to move
-        if repositoryutils.composite_repository_contains(self._dest_parent_path, self._repository_name):
-            raise Exception("destination {0} already contains a child {1}".format(self._dest_parent_path, self._repository_name))
+        if repositoryutils.composite_repository_contains(self._dest_path, self._repository_name):
+            raise Exception("destination {0} already contains a child {1}".format(self._dest_path, self._repository_name))
         
         return ["Repo {0} will be copy to {1} with the name {2}".format(self._source_path,self._dest_path, self._repository_name),
                 "Active Statistics for {0} ".format(self._repository_name)]            
@@ -31,10 +32,10 @@ class PublishRepository:
     def run(self):
         report = []
         
-        repositoryutils.add_child_to_composite_repository(self._source_path,self._dest_path, self.repository_name)
+        repositoryutils.add_child_to_composite_repository(self._dest_path, self._repository_name,self._source_path)
         report.append("Repo {0} added".format(self._repository_name))
         
-        repositoryutils.activate_stats(self._source_path,self._stats_uri, self._feature_id)
+        repositoryutils.activate_stats(os.path.join(self._dest_path,self._repository_name),self._stats_uri, self._feature_id)
         report.append("Statistics activated for {0}".format(self._repository_name))
         
         return report

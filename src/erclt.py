@@ -1,9 +1,9 @@
 #!/usr/bin/python2.6
 # vi: sw=4 ts=4 expandtab smarttab ai smartindent
-from milestoneaction import MilestoneAction
 import argparse
 import sys
 from action.releaseaction import ReleaseAction
+from action.milestoneaction import MilestoneAction
 
 # TODO:
 # * Create an option to wipe destination directories when they exist

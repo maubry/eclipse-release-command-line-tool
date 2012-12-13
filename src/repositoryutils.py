@@ -38,11 +38,11 @@ def is_repository(path):
         contain_content = False
         contain_plugins = False
         for f in os.listdir(path):
-            if _REPOSITORY_ARTIFACTS_JARFILE == f and os.path.isfile(f):
+            if _REPOSITORY_ARTIFACTS_JARFILE == f and os.path.isfile(os.path.join(path,f)):
                 contain_artifact = True
-            if _REPOSITORY_CONTENT_JARFILE == f and os.path.isfile(f):
+            if _REPOSITORY_CONTENT_JARFILE == f and os.path.isfile(os.path.join(path,f)):
                 contain_content = True
-            if _REPOSITORY_PLUGINS_DIR == f and os.path.isdir(f):
+            if _REPOSITORY_PLUGINS_DIR == f and os.path.isdir(os.path.join(path,f)):
                 contain_plugins = True
         return contain_artifact and contain_content and contain_plugins
     return False
@@ -52,9 +52,9 @@ def is_composite_repository(path):
         contain_artifact = False
         contain_content = False
         for f in os.listdir(path):
-            if _COMPOSITE_REPOSITORY_ARTIFACTS_FILE == f:
+            if _COMPOSITE_REPOSITORY_ARTIFACTS_FILE == f and os.path.isfile(os.path.join(path,f)):
                 contain_artifact = True
-            if _COMPOSITE_REPOSITORY_CONTENT_FILE == f:
+            if _COMPOSITE_REPOSITORY_CONTENT_FILE == f and os.path.isfile(os.path.join(path,f)):
                 contain_content = True
         return contain_artifact and contain_content
     return False
@@ -65,7 +65,7 @@ def composite_repository_contains(path,child_repository_name):
         return True
 
 def composite_repository_list_child(path):
-    return [os.path.basename(f) for f in os.listdir(path) if os.path.isdir(os.path.join(path,f))]            
+    return [f for f in os.listdir(path) if os.path.isdir(os.path.join(path,f))]            
 
 def move_child_from_composite_repository (source_composite_repository_path, destination_composite_repository_path, old_child_repository_name,new_child_repository_name):
     # remove from composite repository files (artifacts and content)
@@ -103,7 +103,7 @@ def add_child_to_composite_repository(composite_repository_path, child_repositor
 def activate_stats(composite_repository_path,stats_uri,feature_id):
     # activate stats for given repository
     artifacts_file_path = os.path.join(composite_repository_path, _REPOSITORY_ARTIFACTS_JARFILE)
-    _xml_add_child_repository(artifacts_file_path, _REPOSITORY_ARTIFACTS_XMLFILE, stats_uri, feature_id)
+    _xml_zip_activate_stats(artifacts_file_path, _REPOSITORY_ARTIFACTS_XMLFILE, stats_uri, feature_id)
 
 #
 #  Private Repository Handling function
@@ -227,7 +227,7 @@ def _xml_zip_activate_stats(zip_file_path, xml_file_path, stats_uri_value, featu
         if not isvaluesetted:
             raise ValueError('Unable to set "download.stats".')
         
-    _xml_zip_handle_file(xml_file_path, f)
+    _xml_zip_handle_file(zip_file_path,xml_file_path, f)
 
 def _xml_handle_file(xml_file_path, handlexml_function):
     # load content
@@ -277,7 +277,7 @@ def _xml_zip_handle_file(zip_file_path, xml_file_path, handlexml_function):
     ################
     zfile = zipfile.ZipFile(zip_file_path, 'w')
     zfile.writestr(xml_file_path,
-            buf.getvalue())
+            xml)
     zfile.close
 
     
