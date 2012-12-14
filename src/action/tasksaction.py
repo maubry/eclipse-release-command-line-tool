@@ -1,17 +1,16 @@
 '''
 '''
-import argparse
 from locale import str
 import sys
 
-class TasksAction(argparse.Action):
+class TasksAction():
     
-    def gettasks(self):
+    def gettasks(self,args):
         return []
     
-    def __call__(self, parser, args, values, option_string=None):
+    def __call__(self, args):
         # get all tasks
-        tasks = self.gettasks()
+        tasks = self.gettasks(args)
         
         # check before executing plan
         print "Plan for {0} :".format(self.name())
