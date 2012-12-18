@@ -37,9 +37,6 @@ parser.add_argument('-d', '--directory',
 subparsers = parser.add_subparsers(title='All possible release action', help="The possible action, [action] -h to have help")
 
 # milestone action
-def deliver_milestone(args):
-    print "milestone"
-
 milestone_parser = subparsers.add_parser("m",help= "Deliver a milestone version")
 milestone_parser.add_argument('-mv', '--milestoneversion',
         help     = 'New version number, for this milestone release.',
@@ -48,9 +45,6 @@ milestone_parser.add_argument('-mv', '--milestoneversion',
 milestone_parser.set_defaults(func=MilestoneAction())
 
 # stable action
-def deliver_stable(args):
-    print "stable"
-
 stable_parser = subparsers.add_parser("s", help="Deliver a stable version")
 stable_parser.add_argument('-mv', '--milestoneversion',
         help     = 'The milestone version which should be used as new stable release.',
