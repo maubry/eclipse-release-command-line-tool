@@ -41,7 +41,8 @@ class MoveProductsFolder:
     def run(self):
         shutil.move(self._source_path, self._dest_path)
         
-        #TODO change file permissions
+        productutils.set_file_permissions(self._dest_path)
+        
         return ["Products folder moved.".format(self._source_path,self._dest_path)]   
                 
     def name(self):

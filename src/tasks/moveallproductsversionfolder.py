@@ -47,7 +47,9 @@ class MoveAllProductVersionFolder:
         report =[]
         
         for sf in os.listdir(self._source_path):
-            shutil.move(os.path.join(self._source_path,sf),os.path.join(self._dest_path,sf))
+            dest_path = os.path.join(self._dest_path,sf)
+            shutil.move(os.path.join(self._source_path,sf),dest_path)
+            productutils.set_file_permissions(dest_path)
             report.append("Products {0} moved.".format(sf))
         
         #TODO change file permissions

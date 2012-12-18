@@ -3,6 +3,7 @@
 '''
 import shutil
 from tasks.moveproductsfolder import MoveProductsFolder
+import productutils
 class CopyProductsFolder(MoveProductsFolder):
     
     def check(self):
@@ -12,6 +13,6 @@ class CopyProductsFolder(MoveProductsFolder):
     def run(self):
         shutil.copytree(self._source_path, self._dest_path)
         
-        #TODO change file permissions
+        productutils.set_file_permissions(self._dest_path)
         
         return ["Products copied."]                       
