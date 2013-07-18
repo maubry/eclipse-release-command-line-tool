@@ -13,9 +13,10 @@ class EclipseFS:
                                'org.eclipse.koneki.ldt.product-linux.gtk.x86.tar.gz',
                                'org.eclipse.koneki.ldt.product-win32.win32.x86_64.zip']}
     
-    _STATS_URI = {'ldt':'http://download.eclipse.org/stats/koneki'}
+    _STATS_URI = {'koneki':'http://download.eclipse.org/stats/koneki'}
     
-    _FEATURE_ID = {'ldt':'org.eclipse.koneki.ldt'}
+    _FEATURE_ID = {'ldt':'org.eclipse.koneki.ldt',
+		   'remote': 'org.eclipse.koneki.ldt.remote'}
     
     def __init__(self, root=None):
         # root is used for test only      

@@ -5,13 +5,13 @@ import repositoryutils
 import os
 class PublishRepository:
     
-    def __init__(self, name, source_path, dest_path,repository_name,stats_uri,feature_id):
+    def __init__(self, name, source_path, dest_path,repository_name,stats_uri,feature_ids):
         self._name = name
         self._source_path = source_path
         self._dest_path = dest_path
         self._repository_name = repository_name
         self._stats_uri = stats_uri
-        self._feature_id = feature_id
+        self._feature_ids = feature_ids
         
     def check(self):
         # check if source is a composite repository
@@ -34,9 +34,9 @@ class PublishRepository:
         
         repositoryutils.add_child_to_composite_repository(self._dest_path, self._repository_name,self._source_path)
         report.append("Repo {0} added".format(self._repository_name))
-        
-        repositoryutils.activate_stats(os.path.join(self._dest_path,self._repository_name),self._stats_uri, self._feature_id)
-        report.append("Statistics activated for {0}".format(self._repository_name))
+
+        repositoryutils.activate_stats(os.path.join(self._dest_path,self._repository_name),self._stats_uri, self._feature_ids)
+        report.append("Statistics activated in {0} for the features {1}".format(self._repository_name, self._feature_ids))
         
         return report
             

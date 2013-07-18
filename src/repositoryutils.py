@@ -100,10 +100,10 @@ def add_child_to_composite_repository(composite_repository_path, child_repositor
     # check repository right
     _set_file_permissions(destination_path)
 
-def activate_stats(composite_repository_path,stats_uri,feature_id):
+def activate_stats(composite_repository_path,stats_uri,feature_ids):
     # activate stats for given repository
     artifacts_file_path = os.path.join(composite_repository_path, _REPOSITORY_ARTIFACTS_JARFILE)
-    _xml_zip_activate_stats(artifacts_file_path, _REPOSITORY_ARTIFACTS_XMLFILE, stats_uri, feature_id)
+    _xml_zip_activate_stats(artifacts_file_path, _REPOSITORY_ARTIFACTS_XMLFILE, stats_uri, feature_ids)
 
 #
 #  Private Repository Handling function
@@ -189,20 +189,27 @@ def _xml_add_child_repository(xml_file_path, child_repository_name):
     _xml_handle_file(xml_file_path, f)
     
     
-def _xml_zip_activate_stats(zip_file_path, xml_file_path, stats_uri_value, feature_id):
+def _xml_zip_activate_stats(zip_file_path, xml_file_path, stats_uri_value, feature_ids):
     
     def f(root):
         """Add statistics values to artifact xml."""
         isvaluesetted = False
+        isstatpropertyset = False
     
         # Adding 'p2.statsURI' to repository properties
         for properties in root.findall('./properties'):
-            ElementTree.SubElement(properties, 'property', {
-                'name'  : 'p2.statsURI',
-                'value' : stats_uri_value})
-            properties.set('size', str(len(properties)))
+            # Check if an existing node desn't already exist to avoid duplicate it
+            for propertie in properties.findall("./property"):
+                if propertie.attrib['name'] == 'p2.statsURI' and propertie.attrib['value'] == stats_uri_value:
+                    isstatpropertyset = True
+            # add the property
+            if not isstatpropertyset:
+                ElementTree.SubElement(properties, 'property', {
+                    'name'  : 'p2.statsURI',
+                    'value' : stats_uri_value})
+                properties.set('size', str(len(properties)))
             isvaluesetted = True
-    
+
         # Notify in case of error
         if not isvaluesetted:
             raise ValueError('Unable to set "p2.statsURI".')
@@ -213,15 +220,16 @@ def _xml_zip_activate_stats(zip_file_path, xml_file_path, stats_uri_value, featu
         for artifact in root.findall('./artifacts/artifact'):
     
             # Activating stat only on feature
-            if artifact.get('classifier') == 'org.eclipse.update.feature' and \
-                    artifact.get('id') == feature_id:
-                version = artifact.get('version')
-                for properties in artifact.findall('./properties'):
-                    ElementTree.SubElement(properties, 'property', {
-                        'name'  : 'download.stats',
-                        'value' : (feature_id + '_{0}').format(version)})
-                    properties.set('size', str(len(properties)))
-                    isvaluesetted = True
+            for feature_id in feature_ids:
+                if artifact.get('classifier') == 'org.eclipse.update.feature' and \
+                        artifact.get('id') == feature_id:
+                    version = artifact.get('version')
+                    for properties in artifact.findall('./properties'):
+                        ElementTree.SubElement(properties, 'property', {
+                            'name'  : 'download.stats',
+                            'value' : (feature_id + '_{0}').format(version)})
+                        properties.set('size', str(len(properties)))
+                        isvaluesetted = True
     
         # Notify in case of error
         if not isvaluesetted:
